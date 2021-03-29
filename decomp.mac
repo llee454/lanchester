@@ -1,0 +1,52 @@
+/*
+  This module defines functions for performing Eigenvector Matrix
+  Decomposition (EMD).
+
+  Given a vector, x, that represents an initial state; a matrix, M,
+  that transforms a state at a time n, to the state at time n + 1; we
+  can represent the function that maps an initial state onto a future
+  state as, f (n) = M^n x. The problem is that M^n is often an
+  intractably complex expression due to the exponentiation. Using EMD
+  however, we can decompose M^n into three matrices, M = Q L^n Q^-1,
+  where L is a diagnal matrix. Hence L^n is easy to compute. Using EMD,
+  we can then easily write an expression for f.
+
+  Note:
+  The number of linearly independent eigenvectors corresponding to a
+  single eigenvalue is its geometric multiplicity. Above, the
+  eigenvalue λ = 2 has geometric multiplicity 2, while λ = −1 has
+  geometric multiplicity 1. The geometric multiplicity of an eigenvalue
+  is less than or equal to its algebraic multiplicity.
+*/
+
+getEigenvectorMatrix (vecs) :=
+  transpose (apply (matrix,
+    apply (append,
+      makelist (vecs [i], i, length (vecs)))))$
+
+getEigenvalueMatrix (vals) :=
+  apply (diag_matrix,
+    apply (append,
+      makelist (
+        makelist (vals [1][i], vals [2][i]),
+        i, length (vals [1]))))$
+
+checkEigenValsVecs (vals, vecs) :=
+  every (
+    lambda ([x, y], is (x = length (y))),
+    vals [2], vecs)$
+
+/*
+  Accepts two arguments: M, a square matrix; and n, an integer; and, if
+  possible, decomposes M^n into M^n = Q L^n Q^-1, where L is a diagnal
+  matrix so that L^n [i][i] = (L [i][i])^n for all i, using eigenvector
+  decomposition.
+*/
+eigenDecompose (M, n) :=
+  block ([vals, vecs, Q, L],
+    [vals, vecs]: eigenvectors (M),
+    if not checkEigenValsVecs (vals, vecs)
+      then error ("[eigenDecompose] Error: the given matrix cannot be decomposed using eigen vector decomposition. The geometric multiplicity of one or more of the eigenvalues is less than the geometric multiplicity of that eigenvalue."),
+    Q: getEigenvectorMatrix (vecs),
+    L: getEigenvalueMatrix (vals),
+    Q . L^n . Q^^-1)$

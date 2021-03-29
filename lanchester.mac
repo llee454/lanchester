@@ -1,0 +1,105 @@
+load (diag)$
+load (eigen)$
+load ("decomp.mac")$
+
+/*
+  Accepts two arguments: p the probability of a given outcome (e.g.
+  heads or tails) in a single trial; and p_c, the probability of
+  continuing; and returns the probability that the sequence will end in
+  the given outcome (e.g. heads or tails).
+
+  Consider the case where you have to flip a coin with three possible
+  outcomes: heads, tails, and continue. If the outcome is continue, you
+  must flip again, and continue the process until you get a heads or a
+  tails. Given the probability of each outcome in a single trial, what
+  is the probability of ultimately getting a heads or a tails?
+
+  p + p pc + p pc^2 + ...
+  = p sum (pc^i, i, 0, inf)
+  = p/(1 - pc)
+*/
+probability (p, p_c) := p/(1 - p_c)$
+
+/*
+  p_h + p_t + p_c = 1
+  = p_h/h + p_t/h + k p_c = 1
+  = 1/h (p_h + p_t) = 1 - k p_c
+  = 1/h (p_h + p_t + p_c) - p_c/h = 1 - k p_c
+  = 1/h - p_c/h = 1 - k p_c
+  = (1 - p_c)/h = 1 - k p_c
+  = k p_c = 1 - (1 - p_c)/h
+  = k = (h + 1 + p_c)/(p_c h)
+  = k = 1/p_c + 1/(p_c h) + 1/h
+*/
+
+/*
+  The probability that the next loss will be a B unit.
+
+  Here we assume that the time interval has been choosen so short that
+  in each increment there are only three possible outcomes, no units
+  are lost, an A unit is lost, or a B unit is lost. The probability
+  that more than one unit is lost (which includes the sceneario that
+  both an A and a B unit) is neglible.
+*/
+pa (a, b) := probability (a*ka, 1 - a*ka - b*kb)$
+pb (a, b) := probability (b*kb, 1 - a*ka - b*kb)$
+
+/*
+  The state transition matrix. Each entry represents the probability of
+  going from one state to the next. Each state represents the number of
+  units lost by A and B.
+*/
+M (na, nb) :=
+  block ([s],
+    s: (na + 1) * (nb + 1) - 1, /* number of states */
+    apply (matrix,
+      makelist (
+        makelist (
+          block ([is_final, to, to_a, to_b, fr, from_a, from_b],
+            is_final (a, b) := is (a = na) or is (b = nb),
+            to: divide (i-1, nb + 1),
+            fr: divide (j-1, nb + 1),
+            [to_a, to_b]: to,
+            [from_a, from_b]: fr,
+            if is (to = fr) and is_final (to_a, to_b)
+              then 1
+              else if not is_final (from_a, from_b) and is (from_a = to_a - 1) and is (from_b = to_b)
+                then pb (a0 - from_a, b0 - from_b) /* a loss */
+                else if not is_final (from_a, from_b) and is (from_a = to_a) and is (from_b = to_b - 1)
+                  then pa (a0 - from_a, b0 - from_b) /* b loss */
+                  else 0), 
+          j, 1, s),
+        i, 1, s)))$
+
+X (na, nb) :=
+  block ([s],
+    s: (na + 1) * (nb + 1) - 1, /* number of states */
+    makelist (
+      divide (i - 1, nb + 1),
+      i, 1, s))$
+
+X0 (na, nb) := columnvector (cons (1, makelist (0, (na + 1) * (nb + 1) - 2)))$
+
+simulate (na, nb, n) :=
+  M (na, nb) ^^ n . X0 (na, nb)$
+
+/*
+ Simulate using the Jordan decomposition.
+*/
+jordanSim (na, nb, n) :=
+  block ([N, Q, J],
+    N: M (na, nb),
+    Q: ModeMatrix (N), /* Jordan Decomposition Mode matrix */
+    J: dispJordan (jordan (N)), /* Compute the quasi diagnal Jordan matrix */
+    Q . J^^n . Q^^-1 . X0 (na, nb))$
+
+/*
+  Demonstrates the equivalence between the Jordan form.
+
+  jordanSim (3, 3, 5) = simulate (3, 3, 5), a0 = 3, b0 = 3, ka = 0.01, kb = 0.07, numer;
+*/
+
+
+
+
+
