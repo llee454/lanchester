@@ -2,6 +2,12 @@ load (diag)$
 load (eigen)$
 load ("decomp.mac")$
 
+ratprint: false$
+
+/* To speed up calculations on the Markov matrix - which is very sparse. */
+sparse: true$
+ratmx:  true$
+
 /*
   Accepts two arguments: p the probability of a given outcome (e.g.
   heads or tails) in a single trial; and p_c, the probability of
@@ -83,6 +89,8 @@ X0 (na, nb) := columnvector (cons (1, makelist (0, (na + 1) * (nb + 1) - 2)))$
 simulate (na, nb, n) :=
   M (na, nb) ^^ n . X0 (na, nb)$
 
+P (na, nb) := append (makelist (0, na * (nb + 1)), makelist (1, nb))$
+
 /*
  Simulate using the Jordan decomposition.
 */
@@ -94,11 +102,39 @@ jordanSim (na, nb, n) :=
     Q . J^^n . Q^^-1 . X0 (na, nb))$
 
 /*
+  Probability that B wins.
+*/
+probabilityB (na, nb, n) := 
+  /* P (na, nb) . M (na, nb) ^^ n . X0 (na, nb)$ */
+  P (na, nb) . M (na, nb) ^^ n$
+
+M11: block ([a0, ka],
+  a0: b0,
+  ka: e * kb,
+  factor (M (1, 1)))$
+
+M22: block ([a0, ka],
+  a0: b0,
+  ka: e * kb,
+  factor (M (2, 2)))$
+
+/*
   Demonstrates the equivalence between the Jordan form.
 
   jordanSim (3, 3, 5) = simulate (3, 3, 5), a0 = 3, b0 = 3, ka = 0.01, kb = 0.07, numer;
 */
 
+/*
+(%i9) matrix ([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]) . matrix ([a0, a1, a2, a3], [b0, b1, b2, b3], [c0, c1, c2, c3], [d0, d1, d2, d3]);
+                              [ 0   0   0   0  ]
+                              [                ]
+                              [ 0   0   0   0  ]
+(%o9)                         [                ]
+                              [ c0  c1  c2  c3 ]
+                              [                ]
+                              [ d0  d1  d2  d3 ]
+
+*/
 
 
 
